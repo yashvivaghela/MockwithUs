@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        body {
+            background: linear-gradient(270deg, #0A2FB9 0%, #080357 100%);
+        }
+
+        .fond_pres {
+            top: -630px;
+            left: -187px;
+            width: 1500px;
+            height: 550px;
+        }
+
+        .text1 {
+            position: absolute;
+            left: 540px;
+            top: 120px;
+            text-align: center;
+            font-family: 'Amiri';
+            font-style: normal;
+            font-weight: 500;
+            font-size: 30px;
+            line-height: 88px;
+            display: flex;
+            align-items: center;
+            font-style: italic;
+
+
+            color: #000000;
+        }
+
+        .text2 {
+            position: absolute;
+            margin-right: 50px;
+            margin-left: 50px;
+            /* left: 100px; */
+            top: 200px;
+
+            font-family: 'Amiri';
+            font-style: normal;
+            font-weight: 200;
+            font-size: 18px;
+            line-height: 53px;
+            display: flex;
+            align-items: center;
+            text-align: center;
+
+            color: #000000;
+        }
+
+        .container1 {
+            position: absolute;
+            width: 400px;
+            height: 300px;
+            left: 150px;
+            top: 470px;
+        }
+
+        .image1 {
+            opacity: 1;
+            display: block;
+            width: 100%;
+            height: auto;
+            transition: .5s ease;
+            backface-visibility: hidden;
+        }
+
+        .middle1 {
+            transition: .5s ease;
+            opacity: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            -ms-transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .container1:hover .image1 {
+            opacity: 0.3;
+        }
+
+        .container1:hover .middle1 {
+            opacity: 1;
+        }
+
+        .label1 {
+
+            color: white;
+            font-family: 'Open Sans';
+            font-style: normal;
+            font-weight: 800;
+            font-size: 27px;
+            display: flex;
+            align-items: center;
+        }
+
+
+        .container2 {
+            position: absolute;
+            width: 400px;
+            height: 300px;
+            right: 150px;
+            top: 470px;
+        }
+
+        .image2 {
+            opacity: 1;
+            display: block;
+            width: 100%;
+            height: auto;
+            transition: .5s ease;
+            backface-visibility: hidden;
+        }
+
+        .middle2 {
+            transition: .5s ease;
+            opacity: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            -ms-transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .container2:hover .image2 {
+            opacity: 0.3;
+        }
+
+        .container2:hover .middle2 {
+            opacity: 1;
+        }
+
+        .label2 {
+
+            color: white;
+            font-family: 'Open Sans';
+            font-style: normal;
+            font-weight: 800;
+            font-size: 27px;
+            display: flex;
+            align-items: center;
+        }
+
+
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light my-3">
+        <a class="navbar-brand text-white mx-2" style="font-family: 'Iceberg'; font-size: 20px;" href="#">MockwithUs</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse " id="navbarSupportedContent">
+            <form class="form-inline my-2  my-lg-0" style="margin-left: 750px">
+
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link text-white mx-4" style="font-family: 'Ubuntu';font-size: 20px;"
+                        href="{{url_for('dashboard')}}">Home<span class="sr-only">(current)</span> </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white mx-4" style="font-family: 'Ubuntu';font-size: 20px;"
+                        href="{{url_for('logout')}}">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+
+    <img src="static/Fond_Pres.png" class="fond_pres" />
+    <div class="text1">
+        What is Interview Assistant?
+    </div>
+    <p class="text2">
+        For a job seeker, job interviews can be stressful, especially if not feeling fully ready for the interview. A
+        mock interview can be useful to reduce the stress of interview process before actually appearing for interviews
+        in front of companies.
+        A mock interview is a kind of simulation of an actual job interview. The mock interview provides practice for a
+        job seeker before having a real-world job interview.
+        In this project we are making a website in which a person can give a mock interview and by analyzing expression
+        based on face and speech of the candidate using features of machine learning,feedbacks will be given.
+    </p>
+
+    <!-- <div class="option1">
+        <img src="static/option1.png" width="350" height="250" />
+        <div class="overlay">MOCK INTERVIEW</div>
+    </div>
+    <div class="option2">
+        <img src="static/option2.png" width="350" height="250" />
+        <div class="overlay" >BLogs & Resources</div>
+    </div> -->
+
+
+    <div class="container1">
+        <img src="static/option1.png" alt="Avatar" class="image1">
+        <a class="middle1" href="{{ url_for('instruction') }}">
+            <div class="label1">MOCK INTERVIEW</div>
+        </a>
+    </div>
+    <div class="container2">
+        <img src="static/option2.png" alt="Avatar" class="image2">
+        <a class="middle2" href="#">
+            <div class="label2">BLOGS</div>
+        </a>
+    </div>
+
+</body>
+
+</html>

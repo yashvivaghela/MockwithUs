@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructions</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css"
+        integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <style>
+        body {
+            background: linear-gradient(270deg, #0A2FB9 0%, #080357 100%);
+        }
+
+
+        .box1 {
+      
+box-sizing: border-box;
+
+position: absolute;
+width: 90%;
+height: 70%;
+right:5%;
+top: 18%;
+
+background: #FFFFFF;
+border: 4px solid #03A9F4;
+box-shadow: 0px 3px 49px 9px rgba(0, 0, 0, 0.06);
+border-radius: 47px;
+        }
+
+        .instruct{
+            position: absolute;
+height: 49px;
+left: 42.29%;
+right: 42.36%;
+top: 3%;
+
+font-family: 'Roboto';
+font-style: normal;
+font-weight: 700;
+font-size: 40px;
+line-height: 47px;
+
+color: rgba(0, 0, 0, 0.87);
+        }
+
+        .list{
+            position: absolute;
+left: 1%;
+top: 18%;
+
+font-family: 'Times New Roman';
+font-style: normal;
+font-size: 22px;
+
+color: #000000;
+
+        }
+        .start{
+            position: absolute;
+width: 260px;
+height: 60px;
+top: 83%;
+right: 10%;
+background: #03A9F4;
+box-shadow: 0px 0px 49px -2px rgba(0, 0, 0, 0.19);
+border-radius: 81px;
+
+font-family: 'Arial';
+font-style: normal;
+font-size: 38px;
+line-height: 49px;
+text-align: center;
+color: #FFFFFF;
+        }
+       
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light my-3">
+        <a class="navbar-brand text-white mx-2" style="font-family: 'Iceberg'; font-size: 20px;" href="#">MockwithUs</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse " id="navbarSupportedContent">
+            <form class="form-inline my-2  my-lg-0" style="margin-left: 750px">
+
+                <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+                <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+            </form>
+            <ul class="navbar-nav mr-auto">
+                <li class="nav-item active">
+                    <a class="nav-link text-white mx-4" style="font-family: 'Ubuntu';font-size: 20px;"
+                        href="{{url_for('dashboard')}}">Home<span class="sr-only">(current)</span> </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white mx-4" style="font-family: 'Ubuntu';font-size: 20px;"
+                        href="{{url_for('logout')}}">Logout</a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="box1">
+        <div class=instruct>
+            Instructions
+        </div>
+        <ol class=list>
+            <li>Be professional: All participants are expected to dress and behave professionally, as they would in a traditional in-person interview.</li>
+            <li>Test the technology: Participants are responsible for testing their internet connection and video conferencing software prior to the interview.</li>
+            <li>Avoid interruptions: Participants should avoid interruptions, such as phone calls or notifications, during the interview.</li>
+            <li>Be prepared: Participants should prepare for the interview as they would for a traditional in-person interview, by researching the company and the role, and having answers to common interview questions ready.</li>
+            <li>Position the camera correctly: Participants should position the camera at eye level and make sure that their face and upper body are clearly visible.</li>
+            <li>Check the lighting: Participants should make sure that their face is well-lit, without any harsh shadows or bright lights behind them.</li>
+            <li>Keep still: Participants should avoid fidgeting, shifting in their seat, or making distracting movements during the interview.</li>
+
+        </ol>
+
+        <button class=start><a href="{{ url_for('mock') }}" style="color: #FFFFFF;">START</a></button>
+
+  
+    </div>
+</body>
+
+</html>
