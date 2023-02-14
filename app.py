@@ -306,8 +306,10 @@ def mock():
                 # Stop recording audio
                 sd.stop()
 
+                recording_array = np.array(recording)
+
                 # Save the recording in .wav format using scipy
-                write("result/record0.wav", frequency, recording)
+                write("result/record0.wav", frequency, recording_array)
                 
                 # Save the recording in .wav format using wavio
                 wv.write("result/record1.wav", recording, frequency, sampwidth=2)
