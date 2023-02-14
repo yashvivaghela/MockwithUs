@@ -12,26 +12,26 @@
         body {
             background: linear-gradient(270deg, #0A2FB9 0%, #080357 100%);
         }
-        .questions{
-            margin-top: 5%;
-         
-
-color: #ffff;
-
-        }
         .submit{
             position: absolute;
 width: 200px;
-height: 50px;
-right: 10%;
+height:100px;
+right: 45%;
+top:20%;
 background: #03A9F4;
-border-radius: 81px;
+border-radius: 10px;
 
 font-family: 'Arial';
 font-style: normal;
 font-size: 32px;
 line-height: 49px;
 text-align: center;
+
+        }
+        .text{
+            color: #ffff;
+            margin-left:3%;
+            margin-top:3%;
 
         }
         
@@ -67,37 +67,10 @@ text-align: center;
         </div>
     </nav>
 
-    <form method="POST">
-        <div class=questions>
-    <ul>
-      {% for question in questions %}
-      
-            <p>{{ question }} </p>
+    <button class=submit><a href="{{ url_for('report') }}" style="color: #FFFFFF;">Generate Report </a></button>
+    <p class="text"> Speech to text result:- {{ text }}</p>
+    <p class="text"> Words you are not suppose to use:- {{ negative_words }}</p>
 
-      {% endfor %}
-    </ul>
-</div>
-
-    </form>
-
-    <div class="container">
-        <div class="row">
-            
-                <form method="post" action="{{ url_for('mock') }}">
-                <input type="submit" value="Start Interview" name="start" />
-                <input type="submit" value="Stop Video" name="stop" />
-                <!-- <input type="submit" value="Capture" name="click"/>
-                <input type="submit" value="Grey" name="grey" />
-                <input type="submit" value="Negative" name="neg" />
-                <input type="submit" value="Face Only" name="face" /> -->
-                <input type="submit" value="Start/Stop Recording" name="rec" />
-                </form>
-                <img src="{{ url_for('video_feed') }}" height="80%" width="80%">
-
-                
-            </div>
-        </div>
-    <button class=submit><a href="{{ url_for('submit') }}" style="color: #FFFFFF;">Submit</a></button>
 
 </body>
 
