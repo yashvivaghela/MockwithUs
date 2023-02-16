@@ -26,6 +26,10 @@ import spacy
 from spacy.matcher import PhraseMatcher
 from pandas import *
 
+import pandas as pd
+from fer import FER
+from fer import Video
+
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -165,28 +169,28 @@ def record(out):
         time.sleep(0.05)
         out.write(rec_frame)
 
-def detect_face(frame):
-    global net
-    (h, w) = frame.shape[:2]
-    blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))   
-    net.setInput(blob)
-    detections = net.forward()
-    confidence = detections[0, 0, 0, 2]
+# def detect_face(frame):
+#     global net
+#     (h, w) = frame.shape[:2]
+#     blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))   
+#     net.setInput(blob)
+#     detections = net.forward()
+#     confidence = detections[0, 0, 0, 2]
 
-    if confidence < 0.5:            
-            return frame           
+#     if confidence < 0.5:            
+#             return frame           
 
-    box = detections[0, 0, 0, 3:7] * np.array([w, h, w, h])
-    (startX, startY, endX, endY) = box.astype("int")
-    try:
-        frame=frame[startY:endY, startX:endX]
-        (h, w) = frame.shape[:2]
-        r = 480 / float(h)
-        dim = ( int(w * r), 480)
-        frame=cv2.resize(frame,dim)
-    except Exception as e:
-        pass
-    return frame
+#     box = detections[0, 0, 0, 3:7] * np.array([w, h, w, h])
+#     (startX, startY, endX, endY) = box.astype("int")
+#     try:
+#         frame=frame[startY:endY, startX:endX]
+#         (h, w) = frame.shape[:2]
+#         r = 480 / float(h)
+#         dim = ( int(w * r), 480)
+#         frame=cv2.resize(frame,dim)
+#     except Exception as e:
+#         pass
+#     return frame
 
 def gen_frames():  # generate frame by frame from camera
     global out, capture,rec_frame
@@ -269,19 +273,60 @@ def mock():
                
                
         if  request.form.get('rec') == 'Start/Stop Recording':
-            global rec, out, frequency, recording, duration, stream
+            global rec, out, frequency, recording, duration, stream, video_path
             
             rec= not rec
             
             if(rec):
                 now=datetime.datetime.now() 
-                # fourcc = cv2.VideoWriter_fourcc(*'XVID')
-                # out = cv2.VideoWriter('result/vid_{}.avi'.format(str(now).replace(":",'')), fourcc, 20.0, (640, 480))
-                fourcc = cv2.VideoWriter_fourcc(*'avc1')
-                out = cv2.VideoWriter('result/vid_{}.mov'.format(str(now).replace(":",'')), fourcc, 20.0, (640, 480))
-                print("Codec:", fourcc)
-                print("FPS:", out.get(cv2.CAP_PROP_FPS))
-                print("Frame Size:", out.get(cv2.CAP_PROP_FRAME_WIDTH), "x", out.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                video_filename = 'vid_{}.avi'.format(str(now).replace(':', ''))
+                video_path = os.path.join('result', video_filename)
+                frames_per_second = 24.0
+                res = '720p'
+
+                # Set resolution for the video capture
+                # Function adapted from https://kirr.co/0l6qmh
+                def change_res(cap, width, height):
+                    cap.set(3, width)
+                    cap.set(4, height)
+
+                # Standard Video Dimensions Sizes
+                STD_DIMENSIONS =  {
+                    "480p": (640, 480),
+                    "720p": (1280, 720),
+                    "1080p": (1920, 1080),
+                    "4k": (3840, 2160),
+                }
+
+                # grab resolution dimensions and set video capture to it.
+                def get_dims(cap, res='1080p'):
+                    width, height = STD_DIMENSIONS["480p"]
+                    if res in STD_DIMENSIONS:
+                        width,height = STD_DIMENSIONS[res]
+                    ## change the current caputre device
+                    ## to the resulting resolution
+                    change_res(cap, width, height)
+                    return width, height
+
+                # Video Encoding, might require additional installs
+                # Types of Codes: http://www.fourcc.org/codecs.php
+                VIDEO_TYPE = {
+                    'avi': cv2.VideoWriter_fourcc(*'XVID'),
+                    #'mp4': cv2.VideoWriter_fourcc(*'H264'),
+                    'mp4': cv2.VideoWriter_fourcc(*'XVID'),
+                }
+
+                def get_video_type(filename):
+                    filename, ext = os.path.splitext(filename)
+                    if ext in VIDEO_TYPE:
+                        return  VIDEO_TYPE[ext]
+                        return VIDEO_TYPE['mp4']
+
+
+                cap = cv2.VideoCapture(0)
+                out = cv2.VideoWriter(video_path, get_video_type(video_path), 25, get_dims(cap, res))
+                # fourcc = cv2.VideoWriter_fourcc(*'avc1')
+                # out = cv2.VideoWriter('result/vid_{}.mov'.format(str(now).replace(":",'')), fourcc, 20.0, (640, 480))
                 #Start new thread for recording the video
                 thread = Thread(target = record, args=[out,])
                 thread.start()
@@ -375,7 +420,38 @@ def report():
     
     # negative_words = [span.text for match_id, start, end in matches for span in sentence[start:end]]
 
-    return render_template('report.html',text=s, negative_words=negative_words)
+    #fer part
+    location_videofile = (video_path)
+
+    face_detector = FER(mtcnn=True)
+    input_video = Video(location_videofile)
+
+    processing_data = input_video.analyze(face_detector, display=False)
+
+    vid_df = input_video.to_pandas(processing_data)
+    vid_df = input_video.get_first_face(vid_df)
+    vid_df = input_video.get_emotions(vid_df)
+
+    # pltfig = vid_df.plot(figsize=(20, 8), fontsize=16).get_figure()
+    # pltfig.savefig('data.png')
+
+    angry = sum(vid_df.angry)
+    disgust = sum(vid_df.disgust)
+    fear = sum(vid_df.fear)
+    happy = sum(vid_df.happy)
+    sad = sum(vid_df.sad)
+    surprise = sum(vid_df.surprise)
+    neutral = sum(vid_df.neutral)
+
+    emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+    emotions_values = [angry, disgust, fear, happy, sad, surprise, neutral]
+
+
+    score_comparisons = pd.DataFrame(emotions, columns = ['Human Emotions'])
+    score_comparisons['Emotion Value from the Video'] = emotions_values
+    score_comparisons.to_csv('data1.csv', index=False)
+
+    return render_template('report.html',text=s, negative_words=negative_words,emotions=emotions, emotions_values=emotions_values)
 
 
 if __name__ == "__main__":

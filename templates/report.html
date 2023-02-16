@@ -70,6 +70,25 @@ text-align: center;
     <button class=submit><a href="{{ url_for('report') }}" style="color: #FFFFFF;">Generate Report </a></button>
     <p class="text"> Speech to text result:- {{ text }}</p>
     <p class="text"> Words you are not suppose to use:- {{ negative_words }}</p>
+    <div class="text">
+        <p>Face Emotion:</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Emotion</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for i in range(0, emotions|length) %}
+              <tr>
+                <td>{{ emotions[i] }}</td>
+                <td>{{ emotions_values[i] }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
 
 
 </body>
