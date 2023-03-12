@@ -154,12 +154,6 @@ face=0
 switch=1
 rec=0
 
-#make shots directory to save pics
-# try:
-#     os.mkdir('./shots')
-# except OSError as error:
-#     pass
-
 
 # camera = cv2.VideoCapture(0)
 
@@ -169,46 +163,12 @@ def record(out):
         time.sleep(0.05)
         out.write(rec_frame)
 
-# def detect_face(frame):
-#     global net
-#     (h, w) = frame.shape[:2]
-#     blob = cv2.dnn.blobFromImage(cv2.resize(frame, (300, 300)), 1.0, (300, 300), (104.0, 177.0, 123.0))   
-#     net.setInput(blob)
-#     detections = net.forward()
-#     confidence = detections[0, 0, 0, 2]
-
-#     if confidence < 0.5:            
-#             return frame           
-
-#     box = detections[0, 0, 0, 3:7] * np.array([w, h, w, h])
-#     (startX, startY, endX, endY) = box.astype("int")
-#     try:
-#         frame=frame[startY:endY, startX:endX]
-#         (h, w) = frame.shape[:2]
-#         r = 480 / float(h)
-#         dim = ( int(w * r), 480)
-#         frame=cv2.resize(frame,dim)
-#     except Exception as e:
-#         pass
-#     return frame
 
 def gen_frames():  # generate frame by frame from camera
     global out, capture,rec_frame
     while True:
         success, frame = camera.read() 
         if success:
-            # if(face):                
-            #     frame= detect_face(frame)
-            # if(grey):
-            #     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            # if(neg):
-            #     frame=cv2.bitwise_not(frame)    
-            # if(capture):
-            #     capture=0
-            #     now = datetime.datetime.now()
-            #     p = os.path.sep.join(['shots', "shot_{}.png".format(str(now).replace(":",''))])
-            #     cv2.imwrite(p, frame)
-            
             if(rec):
                 rec_frame=frame
                 frame= cv2.putText(cv2.flip(frame,1),"Recording...", (0,25), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255),4)
@@ -232,38 +192,28 @@ def video_feed():
     return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
+if not os.path.isdir("audio_video_files"):
+    os.mkdir("audio_video_files")
+
 if not os.path.isdir("result"):
     os.mkdir("result")
 
 
-@app.route('/mock',methods=['POST','GET'])
-@login_required
-def mock():
+questions = read_questions_from_csv('interview_questions.csv')
+random_questions = select_random_questions(questions, 3)
 
+
+@app.route('/question/<int:question_num>', methods=['GET', 'POST'])
+def question(question_num):
+    # if question_num > len(random_questions):
+    #     return redirect(url_for('submit'))
+    
+    question = random_questions[question_num - 1]
     global switch,camera
     if request.method == 'POST':
-        # if request.form.get('click') == 'Capture':
-        #     global capture
-        #     capture=1
-        # elif  request.form.get('grey') == 'Grey':
-        #     global grey
-        #     grey=not grey
-        # elif  request.form.get('neg') == 'Negative':
-        #     global neg
-        #     neg=not neg
-        # elif  request.form.get('face') == 'Face Only':
-        #     global face
-        #     face=not face 
-        #     if(face):
-        #         time.sleep(4)   
-        
-
         if  request.form.get('start') == 'Start Interview':
-            global random_questions
             # switch=0
             camera = cv2.VideoCapture(0)
-            questions = read_questions_from_csv('interview questions.csv')
-            random_questions = select_random_questions(questions, 10)
         
         if request.form.get('stop') == 'Stop Video':
             camera.release()
@@ -273,14 +223,14 @@ def mock():
                
                
         if  request.form.get('rec') == 'Start/Stop Recording':
-            global rec, out, frequency, recording, duration, stream, video_path
+            global rec, out, frequency, recording, duration, stream, video_path, audio_path
             
             rec= not rec
             
             if(rec):
                 now=datetime.datetime.now() 
-                video_filename = 'vid_{}.avi'.format(str(now).replace(':', ''))
-                video_path = os.path.join('result', video_filename)
+                video_filename = 'vid_q{}.avi'.format(question_num)
+                video_path = os.path.join('audio_video_files', video_filename)
                 frames_per_second = 24.0
                 res = '720p'
 
@@ -352,17 +302,17 @@ def mock():
                 sd.stop()
 
                 recording_array = np.array(recording)
-
+                audio_filename = f"question{question_num}_audio.wav"
+                audio_path = os.path.join('audio_video_files', audio_filename)
                 # Save the recording in .wav format using scipy
-                write("result/record0.wav", frequency, recording_array)
+                write(f"audio_video_files/record0{question_num}.wav", frequency, recording_array)
                 
                 # Save the recording in .wav format using wavio
-                wv.write("result/record1.wav", recording, frequency, sampwidth=2)
-        
-    elif request.method=='GET':
-        return render_template('mock.html')
+                wv.write(audio_path, recording, frequency, sampwidth=2)
+
+        # return redirect(url_for('question', question_num=question_num+1))
     
-    return render_template('mock.html', questions=random_questions)
+    return render_template('mock.html', question=question, question_num=question_num,random_questions=random_questions)
 
 
 @app.route('/submit', methods=['GET', 'POST'])
@@ -373,85 +323,98 @@ def submit():
 @app.route('/report', methods=['GET', 'POST'])
 @login_required
 def report():
-    #speech to text
-    global s
-    r = sr.Recognizer()
-    audio = sr.AudioFile('result/record1.wav')
+    results = []
     
-    with audio as source:
-        audio = r.record(source)
+    # for question_num in range(1, len(random_questions) + 1):
+    for i, question in enumerate(random_questions, start=1):
+        #speech to text
+        global s
+        now=datetime.datetime.now() 
+        video_filename = 'vid_q{}.avi'.format(i)
+        video_path = os.path.join('audio_video_files', video_filename)
+        audio_filename = f"question{i}_audio.wav"
+        audio_path = os.path.join('audio_video_files', audio_filename)
+
+
+        r = sr.Recognizer()
+        audio = sr.AudioFile(audio_path)
         
-    try:
-        s = r.recognize_google(audio)
-    except Exception as e:
-        print("Exception: " + str(e))
+        with audio as source:
+            audio = r.record(source)
+            
+        try:
+            s = r.recognize_google(audio)
+        except Exception as e:
+            print("Exception: " + str(e))
+            
+        with open (f'result/text{i}.txt', 'w') as file:  
+            # for s in s:  
+            file.write(s) 
+
+        #nlp part
+        data = read_csv("words.csv")
+
+        nlp = spacy.load('en_core_web_sm')
+
+        matcher = PhraseMatcher(nlp.vocab)
+
+        phrases = data['negative words'].tolist()
+
+        patterns = [nlp(text) for text in phrases]
+
+        matcher.add('AI', None, *patterns)
+
+        with open(f'result/text{i}.txt') as f:
+            contents = f.read().rstrip()
+
+        filtered_sentence = contents.lower()
+
+        sentence = nlp(filtered_sentence)
+        matches = matcher(sentence)
+        negative_words = []
+        for match_id, start, end in matches:
+            span = sentence[start:end]
+            negative_words.append(span.text)
+
+        # Join the negative words into a single string separated by a comma
+        negative_words = ", ".join(negative_words)
         
-    with open ('text.txt', 'w') as file:  
-        # for s in s:  
-        file.write(s) 
+        # negative_words = [span.text for match_id, start, end in matches for span in sentence[start:end]]
 
-    #nlp part
-    data = read_csv("words.csv")
+        #fer part
+        location_videofile = (video_path)
 
-    nlp = spacy.load('en_core_web_sm')
+        face_detector = FER(mtcnn=True)
+        input_video = Video(location_videofile)
 
-    matcher = PhraseMatcher(nlp.vocab)
+        processing_data = input_video.analyze(face_detector, display=False)
 
-    phrases = data['negative words'].tolist()
+        vid_df = input_video.to_pandas(processing_data)
+        vid_df = input_video.get_first_face(vid_df)
+        vid_df = input_video.get_emotions(vid_df)
 
-    patterns = [nlp(text) for text in phrases]
+        # pltfig = vid_df.plot(figsize=(20, 8), fontsize=16).get_figure()
+        # pltfig.savefig('data.png')
 
-    matcher.add('AI', None, *patterns)
+        angry = sum(vid_df.angry)
+        disgust = sum(vid_df.disgust)
+        fear = sum(vid_df.fear)
+        happy = sum(vid_df.happy)
+        sad = sum(vid_df.sad)
+        surprise = sum(vid_df.surprise)
+        neutral = sum(vid_df.neutral)
 
-    with open('text.txt') as f:
-        contents = f.read().rstrip()
-
-    filtered_sentence = contents.lower()
-
-    sentence = nlp(filtered_sentence)
-    matches = matcher(sentence)
-    negative_words = []
-    for match_id, start, end in matches:
-        span = sentence[start:end]
-        negative_words.append(span.text)
-
-    # Join the negative words into a single string separated by a comma
-    negative_words = ", ".join(negative_words)
-    
-    # negative_words = [span.text for match_id, start, end in matches for span in sentence[start:end]]
-
-    #fer part
-    location_videofile = (video_path)
-
-    face_detector = FER(mtcnn=True)
-    input_video = Video(location_videofile)
-
-    processing_data = input_video.analyze(face_detector, display=False)
-
-    vid_df = input_video.to_pandas(processing_data)
-    vid_df = input_video.get_first_face(vid_df)
-    vid_df = input_video.get_emotions(vid_df)
-
-    # pltfig = vid_df.plot(figsize=(20, 8), fontsize=16).get_figure()
-    # pltfig.savefig('data.png')
-
-    angry = sum(vid_df.angry)
-    disgust = sum(vid_df.disgust)
-    fear = sum(vid_df.fear)
-    happy = sum(vid_df.happy)
-    sad = sum(vid_df.sad)
-    surprise = sum(vid_df.surprise)
-    neutral = sum(vid_df.neutral)
-
-    emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
-    emotions_values = [angry, disgust, fear, happy, sad, surprise, neutral]
+        emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+        emotions_values = [angry, disgust, fear, happy, sad, surprise, neutral]
 
 
-    score_comparisons = pd.DataFrame(emotions, columns = ['Human Emotions'])
-    score_comparisons['Emotion Value from the Video'] = emotions_values
-    score_comparisons.to_csv('data1.csv', index=False)
+        score_comparisons = pd.DataFrame(emotions, columns = ['Human Emotions'])
+        score_comparisons['Emotion Value from the Video'] = emotions_values
+        score_comparisons.to_csv(f'result/question{i}_scores.csv', index=False)
+        results.append((f"Question {i}: {question}", s, negative_words, emotions, emotions_values))
 
-    return render_template('report.html',text=s, negative_words=negative_words,emotions=emotions, emotions_values=emotions_values)
+    return render_template('report.html', results=results)
+#   return render_template('report.html',text=s, negative_words=negative_words,emotions=emotions, emotions_values=emotions_values)
 
 
 if __name__ == "__main__":
