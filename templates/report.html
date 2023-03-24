@@ -29,6 +29,22 @@
             text-align: center;
 
         }
+        .submit1 {
+            position: absolute;
+            width: 200px;
+            height: 100px;
+            right: 40%;
+            top: 40%;
+            background: #03A9F4;
+            border-radius: 10px;
+
+            font-family: 'Arial';
+            font-style: normal;
+            font-size: 32px;
+            line-height: 49px;
+            text-align: center;
+
+        }
 
         .text {
             color: #ffff;
@@ -91,8 +107,8 @@
     </div> -->
     {% for result in results %}
     <p class="text">{{ result[0] }}</p>
-    <p class="text">Speech-to-text Result: {{ result[1] }}</p>
-    <p class="text">Negative Words: {{ result[2] }}</p>
+    <p class="text">Answer:- {{ result[1] }}</p>
+    <p class="text">Words youre not suppose to use:- {{ result[2] }}</p>
     <div class="text">
     <table>
         <thead>
@@ -112,6 +128,8 @@
     </table>
     </div>
 {% endfor %}
+
+<button class=submit1><a href="{{ url_for('pdf') }}" style="color: #FFFFFF;">Get PDF </a></button>
 
 
 

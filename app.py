@@ -1,4 +1,4 @@
-from flask import Flask , render_template, url_for, redirect,  Response, request
+from flask import Flask , render_template, url_for, redirect,  Response, request, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from flask_login import UserMixin, login_user, LoginManager, login_required, logout_user, current_user
@@ -29,6 +29,11 @@ from pandas import *
 import pandas as pd
 from fer import FER
 from fer import Video
+
+# pdf generation
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 
 app = Flask(__name__)
@@ -199,7 +204,7 @@ if not os.path.isdir("result"):
     os.mkdir("result")
 
 
-questions = read_questions_from_csv('interview_questions.csv')
+questions = read_questions_from_csv('interview questions.csv')
 random_questions = select_random_questions(questions, 3)
 
 
@@ -323,6 +328,7 @@ def submit():
 @app.route('/report', methods=['GET', 'POST'])
 @login_required
 def report():
+    global results
     results = []
     
     # for question_num in range(1, len(random_questions) + 1):
@@ -415,6 +421,51 @@ def report():
 
     return render_template('report.html', results=results)
 #   return render_template('report.html',text=s, negative_words=negative_words,emotions=emotions, emotions_values=emotions_values)
+
+
+# pdf generation
+@app.route('/pdf', methods=['GET', 'POST'])
+@login_required
+def pdf():
+    # Generate the PDF report
+    buffer = BytesIO()
+    pdf_canvas = canvas.Canvas(buffer, pagesize=letter)
+
+    y = 700
+    for result in results:
+        # Check if there's enough space on the current page
+        if y <= 120:
+            pdf_canvas.showPage()
+            y = 700
+
+        pdf_canvas.drawString(100, y, result[0])  # question
+        pdf_canvas.drawString(100, y - 20, 'Answer:-')  # speech to text header
+        pdf_canvas.drawString(220, y - 20, result[1])  # speech to text
+        pdf_canvas.drawString(100, y - 40, 'Words youre not suppose to use:-')  # negative words header
+        pdf_canvas.drawString(220, y - 40, result[2])  # negative words
+        pdf_canvas.drawString(100, y - 60, 'Face Emotions:-')  # emotions header
+        pdf_canvas.drawString(120, y - 80, 'Emotion')  # emotion header
+        pdf_canvas.drawString(220, y - 80, 'Value')  # value header
+        y -= 100
+        for i in range(len(result[3])):
+            # Check if there's enough space on the current page
+            if y <= 120:
+                pdf_canvas.showPage()
+                y = 700
+
+            pdf_canvas.drawString(120, y - i*20, result[3][i])  # emotion
+            pdf_canvas.drawString(220, y - i*20, str(result[4][i]))  # value
+            
+        y -= (len(result[3]) * 20 + 20)
+
+    pdf_canvas.save()
+
+    # Set the buffer to the beginning and send the PDF as a response
+    buffer.seek(0)
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = 'attachment; filename=report.pdf'
+    return response
 
 
 if __name__ == "__main__":
