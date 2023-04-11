@@ -15,11 +15,13 @@ import os, sys
 import numpy as np
 from threading import Thread
 
-
 import sounddevice as sd
+import soundfile as sf
 from scipy.io.wavfile import write
 import wavio as wv
 import speech_recognition as sr
+import pyaudio
+import wave
 
 import spacy
 #import the phrase matcher
@@ -34,7 +36,8 @@ from fer import Video
 from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.platypus import Paragraph
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -133,21 +136,31 @@ def instruction():
 #reading csv file and getting 10 random questions
 def read_questions_from_csv(filename):
     questions = []
-    with open('interview questions.csv', 'r') as csvfile:
+    with open(filename, 'r') as csvfile:
         reader = csv.reader(csvfile)
         for row in reader:
             questions.append(row[0])
         return questions
+    
+def read_keywords_from_csv(filename):
+    keywords = []
+    with open(filename, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        for row in reader:
+            keyword_list = [keyword.strip() for keyword in row[1].split(",")]
+            keywords.append(keyword_list)
+        return keywords
 
-def select_random_questions(questions, count):
-    return random.sample(questions, count)
+def select_random_questions(questions, keywords, count):
+    random_questions = random.sample(questions, count)
+    random_keywords = [keywords[questions.index(q)] for q in random_questions]
+    return random_questions, random_keywords
+    # return random.sample(questions, count)
 
-# @app.route('/mock', methods=['GET', 'POST'])
-# @login_required
-# def mock():
-#     questions = read_questions_from_csv('interview questions.csv')
-#     random_questions = select_random_questions(questions, 10)
-#     return render_template('mock.html', questions=random_questions)
+questions = read_questions_from_csv('questions.csv')
+# random_questions = select_random_questions(questions, 3)
+keywords = read_keywords_from_csv('questions.csv')
+random_questions, random_keywords = select_random_questions(questions, keywords, 3)
 
 
 #video screen recording code
@@ -203,17 +216,19 @@ if not os.path.isdir("audio_video_files"):
 if not os.path.isdir("result"):
     os.mkdir("result")
 
-
-questions = read_questions_from_csv('interview questions.csv')
-random_questions = select_random_questions(questions, 3)
-
+chunk = 1024  # Record in chunks of 1024 samples
+sample_format = pyaudio.paInt16  # 16 bits per sample
+channels = 1
+fs = 44100  # Record at 44100 samples per second
 
 @app.route('/question/<int:question_num>', methods=['GET', 'POST'])
+@login_required
 def question(question_num):
     # if question_num > len(random_questions):
     #     return redirect(url_for('submit'))
     
     question = random_questions[question_num - 1]
+
     global switch,camera
     if request.method == 'POST':
         if  request.form.get('start') == 'Start Interview':
@@ -228,7 +243,7 @@ def question(question_num):
                
                
         if  request.form.get('rec') == 'Start/Stop Recording':
-            global rec, out, frequency, recording, duration, stream, video_path, audio_path
+            global rec, out, frequency, recording, duration, stream, video_path, audio_path,frames,p
             
             rec= not rec
             
@@ -287,33 +302,65 @@ def question(question_num):
                 thread.start()
 
 
-                #audio recording 
+                # audio recording 
+                frames = []
+                p = pyaudio.PyAudio()
+                stream = p.open(format=sample_format,
+                                channels=channels,
+                                rate=fs,
+                                frames_per_buffer=chunk,
+                                input=True)
+                recording = True
+                while recording:
+                    audio_data = stream.read(chunk)
+                    frames.append(audio_data)
+                    if not rec:
+                        recording = False
 
-                # Sampling frequency
-                frequency = 44400
-            
-                # Start recording audio
-                # recording = sd.rec(int(frequency*60),samplerate=frequency, channels=1)
-                recording = []
-                while rec:
-                    recording.extend(sd.rec(int(frequency*1),samplerate=frequency, channels=1))
-                    sd.wait()
-                recording = np.concatenate(recording)
+                stream.stop_stream()
+                stream.close()
+                p.terminate()
+
                 
+                # audio recording using sounddevice
+                # frequency = 44400
+            
+                # # Start recording audio
+                # # recording = sd.rec(int(frequency*60),samplerate=frequency, channels=1)
+                # recording = []
+                # while rec:
+                #     recording.extend(sd.rec(int(frequency*1),samplerate=frequency, channels=1, blocksize=1024))
+                #     sd.wait()
+                # recording = np.concatenate(recording)
+           
             elif(rec==False):
                 out.release()
 
-                # Stop recording audio
-                sd.stop()
-
-                recording_array = np.array(recording)
                 audio_filename = f"question{question_num}_audio.wav"
                 audio_path = os.path.join('audio_video_files', audio_filename)
+
+                
+                # Save the recorded data as a WAV file
+                wf = wave.open(audio_path, 'wb')
+                wf.setnchannels(channels)
+                wf.setsampwidth(p.get_sample_size(sample_format))
+                wf.setframerate(fs)
+                wf.writeframes(b''.join(frames))
+                wf.close()
+                
+        
+                # # Stop recording audio using sounddevice
+                # sd.stop()
+
+                # recording_array = np.array(recording)
+                # # Save the recording in .wav format using soundfile
+                # sf.write(audio_path, recording, frequency, subtype='PCM_16')
+
                 # Save the recording in .wav format using scipy
-                write(f"audio_video_files/record0{question_num}.wav", frequency, recording_array)
+                # write(f"audio_video_files/record0{question_num}.wav", frequency, recording_array)
                 
                 # Save the recording in .wav format using wavio
-                wv.write(audio_path, recording, frequency, sampwidth=2)
+                # wv.write(audio_path, recording, frequency, sampwidth=2)
 
         # return redirect(url_for('question', question_num=question_num+1))
     
@@ -328,12 +375,14 @@ def submit():
 @app.route('/report', methods=['GET', 'POST'])
 @login_required
 def report():
-    global results
+    global results, context
     results = []
     
     # for question_num in range(1, len(random_questions) + 1):
     for i, question in enumerate(random_questions, start=1):
-        #speech to text
+        # get the index of the random question in the csv file
+        keyword_list = random_keywords[i-1]
+        
         global s
         now=datetime.datetime.now() 
         video_filename = 'vid_q{}.avi'.format(i)
@@ -341,7 +390,7 @@ def report():
         audio_filename = f"question{i}_audio.wav"
         audio_path = os.path.join('audio_video_files', audio_filename)
 
-
+        #speech to text
         r = sr.Recognizer()
         audio = sr.AudioFile(audio_path)
         
@@ -384,8 +433,6 @@ def report():
 
         # Join the negative words into a single string separated by a comma
         negative_words = ", ".join(negative_words)
-        
-        # negative_words = [span.text for match_id, start, end in matches for span in sentence[start:end]]
 
         #fer part
         location_videofile = (video_path)
@@ -413,14 +460,29 @@ def report():
         emotions = ['Angry', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
         emotions_values = [angry, disgust, fear, happy, sad, surprise, neutral]
 
+        max_value_index = emotions_values.index(max(emotions_values))
+        max_emotion = emotions[max_value_index]
+
 
         score_comparisons = pd.DataFrame(emotions, columns = ['Human Emotions'])
         score_comparisons['Emotion Value from the Video'] = emotions_values
         score_comparisons.to_csv(f'result/question{i}_scores.csv', index=False)
-        results.append((f"Question {i}: {question}", s, negative_words, emotions, emotions_values))
+
+        # checking the context of the answer
+        num_keywords = 0
+        for keyword in keyword_list:
+            keyword_no_quotes = keyword.strip().replace('"', '').lower()
+            if keyword_no_quotes in filtered_sentence:
+                num_keywords += 1
+
+        if num_keywords >= 3:
+            context = "Your answer is in the context"
+        else:
+            context = "Your answer is not in the context"
+
+        results.append((f"Question {i}: {question}", s, negative_words, emotions, emotions_values, max_emotion, context))
 
     return render_template('report.html', results=results)
-#   return render_template('report.html',text=s, negative_words=negative_words,emotions=emotions, emotions_values=emotions_values)
 
 
 # pdf generation
@@ -430,6 +492,8 @@ def pdf():
     # Generate the PDF report
     buffer = BytesIO()
     pdf_canvas = canvas.Canvas(buffer, pagesize=letter)
+    # define a sample style sheet
+    # styles = getSampleStyleSheet()
 
     y = 700
     for result in results:
@@ -438,15 +502,32 @@ def pdf():
             pdf_canvas.showPage()
             y = 700
 
-        pdf_canvas.drawString(100, y, result[0])  # question
-        pdf_canvas.drawString(100, y - 20, 'Answer:-')  # speech to text header
-        pdf_canvas.drawString(220, y - 20, result[1])  # speech to text
+        # pdf_canvas.drawString(100, y, result[0])  # question
+        # pdf_canvas.drawString(100, y - 20, 'Answer:-')  # speech to text header
+        # pdf_canvas.drawString(220, y - 20, result[1])  # speech to text
+
+        # create a Paragraph object for the question with the text and style
+        question_text = result[0]
+        question_paragraph = Paragraph(question_text)
+
+        # create a Paragraph object for the answer with the text and style
+        answer_text = 'Answer: ' + result[1]
+        answer_paragraph = Paragraph(answer_text)
+
+        # draw the question and answer paragraphs on the canvas
+        question_paragraph.wrapOn(pdf_canvas, 500, 50)
+        question_paragraph.drawOn(pdf_canvas, 100, y)
+
+        answer_paragraph.wrapOn(pdf_canvas, 500, 50)
+        answer_paragraph.drawOn(pdf_canvas, 100, y - 20)
+
         pdf_canvas.drawString(100, y - 40, 'Words youre not suppose to use:-')  # negative words header
-        pdf_canvas.drawString(220, y - 40, result[2])  # negative words
-        pdf_canvas.drawString(100, y - 60, 'Face Emotions:-')  # emotions header
-        pdf_canvas.drawString(120, y - 80, 'Emotion')  # emotion header
-        pdf_canvas.drawString(220, y - 80, 'Value')  # value header
-        y -= 100
+        pdf_canvas.drawString(300, y - 40, result[2])  # negative words
+        pdf_canvas.drawString(100, y-60, result[6])  # context of the answer
+        pdf_canvas.drawString(100, y - 80, 'Face Emotions and its score:-')  # emotions header
+        pdf_canvas.drawString(120, y - 100, 'Emotion')  # emotion header
+        pdf_canvas.drawString(220, y - 100, 'Value')  # value header
+        y -= 120
         for i in range(len(result[3])):
             # Check if there's enough space on the current page
             if y <= 120:
@@ -455,8 +536,11 @@ def pdf():
 
             pdf_canvas.drawString(120, y - i*20, result[3][i])  # emotion
             pdf_canvas.drawString(220, y - i*20, str(result[4][i]))  # value
-            
+
         y -= (len(result[3]) * 20 + 20)
+        pdf_canvas.drawString(100, y, 'Max Face Emotion:-')  # Max emotion header
+        pdf_canvas.drawString(220, y, result[5])  # Max emotion
+        y -= 40
 
     pdf_canvas.save()
 

@@ -57,7 +57,7 @@
 
 <body>
     <nav class="navbar navbar-expand-lg navbar-light my-3">
-        <a class="navbar-brand text-white mx-2" style="font-family: 'Iceberg'; font-size: 20px;" href="#">MockwithUs</a>
+        <a class="navbar-brand text-white mx-2" style="font-family: 'Iceberg'; font-size: 20px;" href="{{url_for('dashboard')}}">MockwithUs</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
             aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -127,6 +127,8 @@
         </tbody>
     </table>
     </div>
+    <p class="text">Max Face Emotion: {{ result[5] }}</p>
+    <p class="text">{{ result[6] }}</p>
 {% endfor %}
 
 <button class=submit1><a href="{{ url_for('pdf') }}" style="color: #FFFFFF;">Get PDF </a></button>
