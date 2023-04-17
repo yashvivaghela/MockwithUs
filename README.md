@@ -27,7 +27,8 @@ This website includes a mock interview with some questions chosen at random from
 
 * This is the report generated in PDF format which contains the feedback regarding the mock interview.
 
-<img width="463" alt="Screenshot 2023-04-18 at 2 21 11 AM" src="https://user-images.githubusercontent.com/55362713/232607927-72136096-aa38-4406-b016-fca3256881dc.png">
+<img width="381" alt="image" src="https://user-images.githubusercontent.com/55362713/232608268-0f345cb7-9aa2-4df2-92e2-2e5631cc6abc.png">
+
 
 
 * This page depicts a unique feature of our website which matches Job Description with the candidate’s CV or Resume. Score is given in the percentage format.
