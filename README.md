@@ -25,6 +25,11 @@ This website includes a mock interview with some questions chosen at random from
 
 <img width="621" alt="Screenshot 2023-04-18 at 1 52 03 AM" src="https://user-images.githubusercontent.com/55362713/232601827-1eb294a7-a1d6-480b-b7b9-ee99b9bdbded.png">
 
+* This is the report generated in PDF format which contains the feedback regarding the mock interview.
+
+<img width="463" alt="Screenshot 2023-04-18 at 2 21 11 AM" src="https://user-images.githubusercontent.com/55362713/232607927-72136096-aa38-4406-b016-fca3256881dc.png">
+
+
 * This page depicts a unique feature of our website which matches Job Description with the candidate’s CV or Resume. Score is given in the percentage format.
 
 <img width="625" alt="Screenshot 2023-04-18 at 1 52 11 AM" src="https://user-images.githubusercontent.com/55362713/232601930-3f9a8647-21b0-4b3e-9ce3-c96465245bc2.png">
