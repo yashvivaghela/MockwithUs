@@ -56,13 +56,13 @@ This website includes a mock interview with some questions chosen at random from
 
 
 ### Project Contributors
-@yashvivaghela
+[Yashvi Vaghela](https://github.com/yashvivaghela)
 
-@harshalvaidya10
+[Harshal Vaidya](https://github.com/harshalvaidya10)
 
-@vaspayal
+[Payal Vaswani](https://github.com/vaspayal)
 
-@khushi wadhwani
+[Khushi Wadhwani](https://github.com/kw09)
 
 
 
