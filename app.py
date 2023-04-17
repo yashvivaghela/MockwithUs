@@ -5,6 +5,7 @@ from flask_login import UserMixin, login_user, LoginManager, login_required, log
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import InputRequired, Length, ValidationError
+from wtforms import FileField, SubmitField
 from flask_bcrypt import Bcrypt
 import csv 
 import random
@@ -38,6 +39,18 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph
+
+import pickle
+import soundfile # to read audio file
+
+import numpy as np
+import librosa # to extract speech features
+import glob
+import os
+
+import PyPDF2, pdfplumber
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 bcrypt = Bcrypt(app)
@@ -126,6 +139,72 @@ def register():
 
     return render_template('register.html', form=form)
 
+class UploadFileForm(FlaskForm):
+    file1 = FileField("File 1", validators=[InputRequired()])
+    file2 = FileField("File 2", validators=[InputRequired()])
+    submit = SubmitField("Upload Files")
+
+# job matching code
+@app.route('/jobmatch', methods=['GET', 'POST'])
+@login_required
+def jobmatch():
+    form = UploadFileForm()
+    files_uploaded = False
+    if form.validate_on_submit():
+        file1 = form.file1.data
+        file2 = form.file2.data
+        filename1 = "CV.pdf"  # You can set your own filename here
+        filename2 = "Profile.pdf"  # You can set your own filename here
+        file1.save(os.path.join('static/files', filename1))
+        file2.save(os.path.join('static/files', filename2))
+        files_uploaded = True
+
+    #Target File
+    CV="static/files/CV.pdf"
+    Req="static/files/Profile.pdf"
+
+    #pre-processing
+    CV_File=open(CV,'rb')
+    Script=PyPDF2.PdfReader(CV_File)
+    pages=len(Script.pages)
+    Script = []
+    with pdfplumber.open(CV_File) as pdf:
+        for i in range (0,pages):
+            page=pdf.pages[i]
+            text=page.extract_text()
+            Script.append(text)
+
+    Script=''.join(Script)
+    CV_Clear=Script.replace("\n","")
+    CV_Clear
+
+    Req_File=open(Req,'rb')
+    Script_Req=PyPDF2.PdfReader(Req_File)
+    pages=len(Script_Req.pages)
+
+    Script_Req = []
+    with pdfplumber.open(Req_File) as pdf:
+        for i in range (0,pages):
+            page=pdf.pages[i]
+            text=page.extract_text()
+            Script_Req.append(text)
+
+    Script_Req=''.join(Script_Req)
+    Req_Clear=Script_Req.replace("\n","")
+    Req_Clear
+
+    Match_Test=[CV_Clear,Req_Clear]
+
+    cv=CountVectorizer()
+    count_matrix=cv.fit_transform(Match_Test)
+
+    MatchPercentage=cosine_similarity(count_matrix)[0][1]*100
+    MatchPercentage=round(MatchPercentage,2)
+    similarity= MatchPercentage
+        
+    return render_template('jobmatching.html', form=form,files_uploaded=files_uploaded,similarity=similarity)
+
+
 
 @app.route('/instruction', methods=['GET', 'POST'])
 @login_required
@@ -161,6 +240,47 @@ questions = read_questions_from_csv('questions.csv')
 # random_questions = select_random_questions(questions, 3)
 keywords = read_keywords_from_csv('questions.csv')
 random_questions, random_keywords = select_random_questions(questions, keywords, 3)
+
+#speech emotion
+def extract_feature(file_name, **kwargs):
+    """
+    Extract feature from audio file `file_name`
+        Features supported:
+            - MFCC (mfcc)
+            - Chroma (chroma)
+            - MEL Spectrogram Frequency (mel)
+            - Contrast (contrast)
+            - Tonnetz (tonnetz)
+        e.g:
+        `features = extract_feature(path, mel=True, mfcc=True)`
+    """
+    mfcc = kwargs.get("mfcc")
+    chroma = kwargs.get("chroma")
+    mel = kwargs.get("mel")
+    contrast = kwargs.get("contrast")
+    tonnetz = kwargs.get("tonnetz")
+    with soundfile.SoundFile(file_name) as sound_file:
+        X = sound_file.read(dtype="float32")
+        sample_rate = sound_file.samplerate
+        if chroma or contrast:
+            stft = np.abs(librosa.stft(X))
+        result = np.array([])
+        if mfcc:
+            mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=40).T, axis=0)
+            result = np.hstack((result, mfccs))
+        if chroma:
+            chroma = np.mean(librosa.feature.chroma_stft(S=stft, sr=sample_rate).T,axis=0)
+            result = np.hstack((result, chroma))
+        if mel:
+            mel = np.mean(librosa.feature.melspectrogram(X, sr=sample_rate).T,axis=0)
+            result = np.hstack((result, mel))
+        if contrast:
+            contrast = np.mean(librosa.feature.spectral_contrast(S=stft, sr=sample_rate).T,axis=0)
+            result = np.hstack((result, contrast))
+        if tonnetz:
+            tonnetz = np.mean(librosa.feature.tonnetz(y=librosa.effects.harmonic(X), sr=sample_rate).T,axis=0)
+            result = np.hstack((result, tonnetz))
+    return result
 
 
 #video screen recording code
@@ -480,7 +600,15 @@ def report():
         else:
             context = "Your answer is not in the context"
 
-        results.append((f"Question {i}: {question}", s, negative_words, emotions, emotions_values, max_emotion, context))
+        # Speech emotion
+        # load the saved model (after training)
+        model = pickle.load(open("result/mlp_classifier.model", "rb"))
+        # extract features and reshape it
+        features = extract_feature(audio_path, mfcc=True, chroma=True, mel=True).reshape(1, -1)
+        # predict
+        speech = model.predict(features)[0]
+
+        results.append((f"Question {i}: {question}", s, negative_words, emotions, emotions_values, max_emotion, context,speech))
 
     return render_template('report.html', results=results)
 
@@ -538,9 +666,13 @@ def pdf():
             pdf_canvas.drawString(220, y - i*20, str(result[4][i]))  # value
 
         y -= (len(result[3]) * 20 + 20)
+
         pdf_canvas.drawString(100, y, 'Max Face Emotion:-')  # Max emotion header
         pdf_canvas.drawString(220, y, result[5])  # Max emotion
-        y -= 40
+
+        pdf_canvas.drawString(100, y-20, 'Speech Emotion:-')  # Speech header
+        pdf_canvas.drawString(220, y-20, result[7])  # Speech emo
+        y -= 60
 
     pdf_canvas.save()
 

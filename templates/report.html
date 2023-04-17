@@ -17,7 +17,7 @@
             position: absolute;
             width: 200px;
             height: 100px;
-            right: 40%;
+            right: 10%;
             top: 20%;
             background: #03A9F4;
             border-radius: 10px;
@@ -33,7 +33,7 @@
             position: absolute;
             width: 200px;
             height: 100px;
-            right: 40%;
+            right: 10%;
             top: 40%;
             background: #03A9F4;
             border-radius: 10px;
@@ -52,6 +52,7 @@
             margin-top: 3%;
 
         }
+
     </style>
 </head>
 
@@ -129,6 +130,7 @@
     </div>
     <p class="text">Max Face Emotion: {{ result[5] }}</p>
     <p class="text">{{ result[6] }}</p>
+    <p class="text">Speech Emotion:- {{ result[7] }}</p>
 {% endfor %}
 
 <button class=submit1><a href="{{ url_for('pdf') }}" style="color: #FFFFFF;">Get PDF </a></button>
